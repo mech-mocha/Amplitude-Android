@@ -329,7 +329,7 @@ public class AmplitudePlugin {
         Amplitude.getInstance().identify(new Identify().append(property, values));
     }
 
-    public static void setMinTimeBetweenSessionMills (long timeout) {
+    public static void setMinTimeBetweenSessionsMillis (long timeout) {
         AmplitudeClient.getInstance ().setMinTimeBetweenSessionsMillis(timeout);
     }
 }
