@@ -7,6 +7,7 @@ import android.text.TextUtils;
 import com.amplitude.api.Amplitude;
 import com.amplitude.api.Identify;
 import com.amplitude.api.Revenue;
+import com.amplitude.api.AmplitudeClient;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -326,5 +327,9 @@ public class AmplitudePlugin {
 
     public static void appendUserProperty(String property, String[] values) {
         Amplitude.getInstance().identify(new Identify().append(property, values));
+    }
+
+    public static void setMinTimeBetweenSessionsMillis (long timeout) {
+        AmplitudeClient.getInstance ().setMinTimeBetweenSessionsMillis(timeout);
     }
 }
