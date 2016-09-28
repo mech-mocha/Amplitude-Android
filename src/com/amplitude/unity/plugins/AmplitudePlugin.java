@@ -333,7 +333,7 @@ public class AmplitudePlugin {
         AmplitudeClient.getInstance ().setMinTimeBetweenSessionsMillis(timeout);
     }
 
-    public static void useAdvertisingIdForDeviceId (bool state) {
-        AmplitudeClient.getInstance ().useAdvertisingIdForDeviceId (state);
+    public static void useAdvertisingIdForDeviceId () {
+        AmplitudeClient.getInstance ().useAdvertisingIdForDeviceId ();
     }
 }
