@@ -332,4 +332,8 @@ public class AmplitudePlugin {
     public static void setMinTimeBetweenSessionsMillis (long timeout) {
         AmplitudeClient.getInstance ().setMinTimeBetweenSessionsMillis(timeout);
     }
+
+    public static void useAdvertisingIdForDeviceId () {
+        AmplitudeClient.getInstance ().useAdvertisingIdForDeviceId ();
+    }
 }
