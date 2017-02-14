@@ -1,5 +1,33 @@
 ## Unreleased
 
+## 2.13.2 (December 22, 2016)
+
+* Fix crash when pulling null unsent event strings during upload.
+* Fix bug where unserializable events were being saved to unsent events table.
+* Added more logging around JSON serialization errors when logging events.
+
+## 2.13.1 (December 15, 2016)
+
+* Fix bug where `regenerateDeviceId` was not being run on background thread. DeviceInfo.generateUUID() should be a static method.
+
+## 2.13.0 (December 05, 2016)
+
+* Add helper method to regenerate a new random deviceId. This can be used in conjunction with `setUserId(null)` to anonymize a user after they log out. Note this is not recommended unless you know what you are doing. See [Readme](https://github.com/amplitude/Amplitude-Android#logging-out-and-anonymous-users) for more information.
+
+## 2.12.0 (November 07, 2016)
+
+* Allow `logEvent` with a custom timestamp (milliseconds since epoch). See [documentation](https://rawgit.com/amplitude/Amplitude-Android/master/javadoc/com/amplitude/api/AmplitudeClient.html#logEvent-java.lang.String-org.json.JSONObject-org.json.JSONObject-org.json.JSONObject-org.json.JSONObject-long-boolean-) for more details.
+
+## 2.11.0 (October 26, 2016)
+
+* Add ability to log identify events outOfSession, this is useful for updating user properties without triggering session-handling logic. See [Readme](https://github.com/amplitude/Amplitude-Android#tracking-sessions) for more information.
+
+## 2.10.0 (October 12, 2016)
+
+* Catch and handle `CursorWindowAllocationException` thrown when the SDK is querying from the SQLite DB when app memory is low. If the exception is caught during `initialize`, then it is treated as if `initialize` was never called. If the exception is caught during the uploading of unsent events, then the upload is deferred to a later time.
+* Block event property and user property dictionaries that have more than 1000 items. This is to block properties that are set unintentionally (for example in a loop). A single call to `logEvent` should not have more than 1000 event properties. Similarly a single call to `setUserProperties` should not have more than 1000 user properties.
+* Handle IllegalArgumentException thrown by Android Geocoder for bad lat / lon values.
+
 ## 2.9.2 (July 14, 2016)
 
 * Fix bug where `enableLocationListening` and `disableLocationListening` were not being run on background thread. Thanks to @elevenfive for PR.

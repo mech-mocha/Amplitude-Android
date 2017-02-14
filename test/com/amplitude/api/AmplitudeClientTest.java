@@ -26,6 +26,7 @@ import okhttp3.mockwebserver.RecordedRequest;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -102,7 +103,6 @@ public class AmplitudeClientTest extends BaseTest {
     public void testSetDeviceId() {
         DatabaseHelper dbHelper = DatabaseHelper.getDatabaseHelper(context);
         ShadowLooper looper = Shadows.shadowOf(amplitude.logThread.getLooper());
-        assertNull(amplitude.getDeviceId());
         looper.runToEndOfTasks();
 
         String deviceId = amplitude.getDeviceId(); // Randomly generated device ID
@@ -187,7 +187,9 @@ public class AmplitudeClientTest extends BaseTest {
         assertEquals(getUnsentIdentifyCount(), 1);
         JSONObject event = getLastUnsentIdentify();
         assertEquals(Constants.IDENTIFY_EVENT, event.optString("event_type"));
-        assertEquals(event.optJSONObject("event_properties").length(), 0);
+        assertTrue(Utils.compareJSONObjects(
+            event.optJSONObject("event_properties"), new JSONObject()
+        ));
 
         JSONObject userPropertiesOperations = event.optJSONObject("user_properties");
         assertEquals(userPropertiesOperations.length(), 1);
@@ -236,19 +238,20 @@ public class AmplitudeClientTest extends BaseTest {
     public void testReloadDeviceIdFromDatabase() {
         String deviceId = "test_device_id";
         ShadowLooper looper = Shadows.shadowOf(amplitude.logThread.getLooper());
-
-        assertNull(amplitude.getDeviceId());
         DatabaseHelper.getDatabaseHelper(context).insertOrReplaceKeyValue(
                 AmplitudeClient.DEVICE_ID_KEY,
                 deviceId
         );
-        looper.getScheduler().advanceToLastPostedRunnable();
+
+        // force re-initialize to re-load deviceId from DB
+        amplitude.initialized = false;
+        amplitude.initialize(context, apiKey);
+        looper.runToEndOfTasks();
         assertEquals(deviceId, amplitude.getDeviceId());
     }
 
     @Test
     public void testDoesNotUpgradeDeviceIdFromSharedPrefsToDatabase() {
-        assertNull(amplitude.getDeviceId());
         ShadowLooper looper = Shadows.shadowOf(amplitude.logThread.getLooper());
 
         // initializeDeviceId no longer fetches from SharedPrefs, will get advertising ID instead
@@ -268,7 +271,6 @@ public class AmplitudeClientTest extends BaseTest {
 
     @Test
     public void testGetDeviceIdWithoutAdvertisingId() {
-        assertNull(amplitude.getDeviceId());
         ShadowLooper looper = Shadows.shadowOf(amplitude.logThread.getLooper());
         looper.getScheduler().advanceToLastPostedRunnable();
         assertNotNull(amplitude.getDeviceId());
@@ -487,9 +489,9 @@ public class AmplitudeClientTest extends BaseTest {
 
         // verify some internal counters
         assertEquals(getUnsentEventCount(), 1);
-        assertEquals(amplitude.getLastEventId(), 1);
+        assertEquals(amplitude.lastEventId, 1);
         assertEquals(getUnsentIdentifyCount(), 1);
-        assertEquals(amplitude.getLastIdentifyId(), 1);
+        assertEquals(amplitude.lastIdentifyId, 1);
 
         JSONArray unsentEvents = getUnsentEvents(1);
         assertEquals(unsentEvents.optJSONObject(0).optString("event_type"), "test_event");
@@ -502,7 +504,7 @@ public class AmplitudeClientTest extends BaseTest {
         assertEquals(unsentIdentifys.optJSONObject(0).optString("event_type"), Constants.IDENTIFY_EVENT);
         assertEquals(unsentIdentifys.optJSONObject(0).optLong("sequence_number"), 2);
         assertTrue(Utils.compareJSONObjects(
-                unsentIdentifys.optJSONObject(0).optJSONObject("user_properties"), expectedIdentify
+            unsentIdentifys.optJSONObject(0).optJSONObject("user_properties"), expectedIdentify
         ));
 
         // send response and check that remove events works properly
@@ -512,7 +514,7 @@ public class AmplitudeClientTest extends BaseTest {
         assertEquals(events.optJSONObject(0).optString("event_type"), "test_event");
         assertEquals(events.optJSONObject(1).optString("event_type"), Constants.IDENTIFY_EVENT);
         assertTrue(Utils.compareJSONObjects(
-                events.optJSONObject(1).optJSONObject("user_properties"), expectedIdentify
+            events.optJSONObject(1).optJSONObject("user_properties"), expectedIdentify
         ));
         looper.runToEndOfTasks();
         looper.runToEndOfTasks();
@@ -542,9 +544,9 @@ public class AmplitudeClientTest extends BaseTest {
 
         // verify some internal counters
         assertEquals(getUnsentEventCount(), 4);
-        assertEquals(amplitude.getLastEventId(), 4);
+        assertEquals(amplitude.lastEventId, 4);
         assertEquals(getUnsentIdentifyCount(), 3);
-        assertEquals(amplitude.getLastIdentifyId(), 3);
+        assertEquals(amplitude.lastIdentifyId, 3);
 
         RecordedRequest request = runRequest(amplitude);
         JSONArray events = getEventsFromRequest(request);
@@ -652,9 +654,9 @@ public class AmplitudeClientTest extends BaseTest {
 
         // verify some internal counters
         assertEquals(getUnsentEventCount(), 2);
-        assertEquals(amplitude.getLastEventId(), 3);
+        assertEquals(amplitude.lastEventId, 3);
         assertEquals(getUnsentIdentifyCount(), 2);
-        assertEquals(amplitude.getLastIdentifyId(), 2);
+        assertEquals(amplitude.lastIdentifyId, 2);
 
         JSONObject expectedIdentify1 = new JSONObject();
         expectedIdentify1.put(Constants.AMP_OP_ADD, new JSONObject().put("photo_count", 1));
@@ -827,9 +829,9 @@ public class AmplitudeClientTest extends BaseTest {
         assertEquals(obj.optString("city"), "Boston");
 
         // user properties should be empty
-        assertEquals(
-            Utils.compareJSONObjects(event.optJSONObject("user_properties"), new JSONObject()), true
-        );
+        assertTrue(Utils.compareJSONObjects(
+            event.optJSONObject("user_properties"), new JSONObject()
+        ));
 
         // api properties should not have any revenue info
         JSONObject apiProps = event.optJSONObject("api_properties");
@@ -883,6 +885,7 @@ public class AmplitudeClientTest extends BaseTest {
     public void testSaveEventLogic() {
         amplitude.trackSessionEvents(true);
         ShadowLooper looper = Shadows.shadowOf(amplitude.logThread.getLooper());
+        looper.runToEndOfTasks();
         looper.runToEndOfTasks();
         assertEquals(getUnsentEventCount(), 0);
 
@@ -1118,8 +1121,10 @@ public class AmplitudeClientTest extends BaseTest {
 
     @Test
     public void testTruncateNullJSONObject() throws JSONException {
-        assertNull(amplitude.truncate((JSONObject) null));
-        assertNull(amplitude.truncate((JSONArray) null));
+        assertTrue(Utils.compareJSONObjects(
+            amplitude.truncate((JSONObject) null), new JSONObject()
+        ));
+        assertEquals(amplitude.truncate((JSONArray) null).length(), 0);
     }
 
     @Test
@@ -1274,7 +1279,9 @@ public class AmplitudeClientTest extends BaseTest {
         assertEquals(getUnsentIdentifyCount(), 1);
         JSONObject event = getLastUnsentIdentify();
         assertEquals(Constants.IDENTIFY_EVENT, event.optString("event_type"));
-        assertEquals(event.optJSONObject("event_properties").length(), 0);
+        assertTrue(Utils.compareJSONObjects(
+            event.optJSONObject("event_properties"), new JSONObject()
+        ));
 
         JSONObject userPropertiesOperations = event.optJSONObject("user_properties");
         assertEquals(userPropertiesOperations.length(), 1);
@@ -1297,7 +1304,9 @@ public class AmplitudeClientTest extends BaseTest {
         assertEquals(getUnsentIdentifyCount(), 1);
         JSONObject event = getLastUnsentIdentify();
         assertEquals(Constants.IDENTIFY_EVENT, event.optString("event_type"));
-        assertEquals(event.optJSONObject("event_properties").length(), 0);
+        assertTrue(Utils.compareJSONObjects(
+            event.optJSONObject("event_properties"), new JSONObject()
+        ));
 
         JSONObject userPropertiesOperations = event.optJSONObject("user_properties");
         assertEquals(userPropertiesOperations.length(), 1);
@@ -1325,8 +1334,12 @@ public class AmplitudeClientTest extends BaseTest {
         assertEquals(getUnsentIdentifyCount(), 0);
         JSONObject event = getLastUnsentEvent();
         assertEquals(event.optString("event_type"), "test");
-        assertEquals(event.optJSONObject("event_properties").length(), 0);
-        assertEquals(event.optJSONObject("user_properties").length(), 0);
+        assertTrue(Utils.compareJSONObjects(
+            event.optJSONObject("event_properties"), new JSONObject()
+        ));
+        assertTrue(Utils.compareJSONObjects(
+            event.optJSONObject("user_properties"), new JSONObject()
+        ));
 
         JSONObject eventGroups = event.optJSONObject("groups");
         assertEquals(eventGroups.length(), 2);
@@ -1365,5 +1378,135 @@ public class AmplitudeClientTest extends BaseTest {
 
         assertEquals(events.getJSONObject(1).optString("event_type"), "testEvent2");
         assertEquals(events.getJSONObject(1).optLong("event_id"), 2);
+    }
+
+    @Test
+    public void testCursorWindowAllocationException() {
+        Robolectric.getForegroundThreadScheduler().advanceTo(1);
+        ShadowLooper looper = Shadows.shadowOf(amplitude.logThread.getLooper());
+
+        // log an event successfully
+        amplitude.logEvent("testEvent1");
+        looper.runToEndOfTasks();
+        assertEquals(getUnsentEventCount(), 1);
+        assertEquals(getUnsentIdentifyCount(), 0);
+
+        // mock out database helper to force CursorWindowAllocationExceptions
+        DatabaseHelper.instance = new MockDatabaseHelper(context);
+
+        // force an upload and verify no request sent
+        // make sure we catch it during sending of events and defer sending
+        RecordedRequest request = runRequest(amplitude);
+        assertNull(request);
+        assertEquals(getUnsentEventCount(), 1);
+        assertEquals(getUnsentIdentifyCount(), 0);
+
+        // make sure we catch it during initialization and treat as uninitialized
+        amplitude.initialized = false;
+        amplitude.initialize(context, apiKey);
+        looper.runToEndOfTasks();
+        assertNull(amplitude.apiKey);
+
+        // since event meta data is loaded during initialize, in theory we should
+        // be able to log an event even if we can't query from it
+        amplitude.context = context;
+        amplitude.apiKey = apiKey;
+        Identify identify = new Identify().set("car", "blue");
+        amplitude.identify(identify);
+        looper.runToEndOfTasks();
+        looper.runToEndOfTasks();
+        assertEquals(getUnsentEventCount(), 1);
+        assertEquals(getUnsentIdentifyCount(), 1);
+    }
+
+    @Test
+    public void testBlockTooManyEventUserProperties() throws JSONException {
+        ShadowLooper looper = Shadows.shadowOf(amplitude.logThread.getLooper());
+
+        JSONObject eventProperties = new JSONObject();
+        JSONObject userProperties = new JSONObject();
+        Identify identify = new Identify();
+
+        for (int i = 0; i < Constants.MAX_PROPERTY_KEYS + 1; i++) {
+            eventProperties.put(String.valueOf(i), i);
+            userProperties.put(String.valueOf(i*2), i*2);
+            identify.setOnce(String.valueOf(i), i);
+        }
+
+        // verify user properties is filtered out
+        amplitude.setUserProperties(userProperties);
+        looper.runToEndOfTasks();
+        looper.runToEndOfTasks();
+        assertEquals(getUnsentIdentifyCount(), 0);
+
+        // verify scrubbed from events
+        amplitude.logEvent("test event", eventProperties);
+        looper.runToEndOfTasks();
+        assertEquals(getUnsentEventCount(), 1);
+        JSONObject event = getLastUnsentEvent();
+        assertEquals(event.optString("event_type"), "test event");
+        assertTrue(Utils.compareJSONObjects(
+            event.optJSONObject("event_properties"), new JSONObject()
+        ));
+
+        // verify scrubbed from identifys - but leaves an empty JSONObject
+        amplitude.identify(identify);
+        looper.runToEndOfTasks();
+        assertEquals(getUnsentIdentifyCount(), 1);
+        JSONObject identifyEvent = getLastUnsentIdentify();
+        assertEquals(identifyEvent.optString("event_type"), "$identify");
+        assertTrue(Utils.compareJSONObjects(
+            identifyEvent.optJSONObject("user_properties"),
+            new JSONObject().put("$setOnce", new JSONObject())
+        ));
+    }
+
+    @Test
+    public void testLogEventWithTimestamp() throws JSONException {
+        ShadowLooper looper = Shadows.shadowOf(amplitude.logThread.getLooper());
+
+        amplitude.logEvent("test", null, null, 1000, false);
+        looper.runToEndOfTasks();
+        JSONObject event = getLastUnsentEvent();
+        assertEquals(event.optLong("timestamp"), 1000);
+
+        amplitude.logEventSync("test", null, null, 2000, false);
+        looper.runToEndOfTasks();
+        event = getLastUnsentEvent();
+        assertEquals(event.optLong("timestamp"), 2000);
+    }
+
+    @Test
+    public void testRegenerateDeviceId() {
+        DatabaseHelper dbHelper = DatabaseHelper.getDatabaseHelper(context);
+        String oldDeviceId = amplitude.getDeviceId();
+        assertEquals(oldDeviceId, dbHelper.getValue("device_id"));
+
+        amplitude.regenerateDeviceId();
+        Shadows.shadowOf(amplitude.logThread.getLooper()).runToEndOfTasks();
+        String newDeviceId = amplitude.getDeviceId();
+        assertNotEquals(oldDeviceId, newDeviceId);
+        assertEquals(newDeviceId, dbHelper.getValue("device_id"));
+        assertTrue(newDeviceId.endsWith("R"));
+    }
+
+    @Test
+    public void testSendNullEvents() throws JSONException {
+        DatabaseHelper dbHelper = DatabaseHelper.getDatabaseHelper(context);
+        ShadowLooper looper = Shadows.shadowOf(amplitude.logThread.getLooper());
+
+        dbHelper.addEvent(null);
+        amplitude.setLastEventId(1);
+        amplitude.getNextSequenceNumber();
+        assertEquals(getUnsentEventCount(), 1);
+
+        amplitude.logEvent("test event");
+        looper.runToEndOfTasks();
+
+        amplitude.updateServer();
+        RecordedRequest request = runRequest(amplitude);
+        JSONArray events = getEventsFromRequest(request);
+        assertEquals(events.length(), 1);
+        assertEquals(events.optJSONObject(0).optString("event_type"), "test event");
     }
 }

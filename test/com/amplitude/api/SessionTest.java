@@ -424,17 +424,17 @@ public class SessionTest extends BaseTest {
         long [] timestamps = {timestamp};
         AmplitudeCallbacks callBacks = new AmplitudeCallbacksWithTime(amplitude, timestamps);
 
-        assertEquals(amplitude.getPreviousSessionId(), -1);
-        assertEquals(amplitude.getLastEventId(), -1);
-        assertEquals(amplitude.getLastEventTime(), -1);
+        assertEquals(amplitude.previousSessionId, -1);
+        assertEquals(amplitude.lastEventId, -1);
+        assertEquals(amplitude.lastEventTime, -1);
         assertFalse(amplitude.isInForeground());
 
         callBacks.onActivityResumed(null);
         Shadows.shadowOf(amplitude.logThread.getLooper()).runToEndOfTasks();
         assertTrue(amplitude.isInForeground());
-        assertEquals(amplitude.getPreviousSessionId(), timestamp);
-        assertEquals(amplitude.getLastEventId(), -1);
-        assertEquals(amplitude.getLastEventTime(), timestamp);
+        assertEquals(amplitude.previousSessionId, timestamp);
+        assertEquals(amplitude.lastEventId, -1);
+        assertEquals(amplitude.lastEventTime, timestamp);
     }
 
     @Test
@@ -444,18 +444,18 @@ public class SessionTest extends BaseTest {
         long [] timestamps = {timestamp};
         AmplitudeCallbacks callBacks = new AmplitudeCallbacksWithTime(amplitude, timestamps);
 
-        assertEquals(amplitude.getPreviousSessionId(), -1);
-        assertEquals(amplitude.getLastEventId(), -1);
-        assertEquals(amplitude.getLastEventTime(), -1);
+        assertEquals(amplitude.previousSessionId, -1);
+        assertEquals(amplitude.lastEventId, -1);
+        assertEquals(amplitude.lastEventTime, -1);
         assertFalse(amplitude.isInForeground());
         assertEquals(getUnsentEventCount(), 0);
 
         callBacks.onActivityResumed(null);
         Shadows.shadowOf(amplitude.logThread.getLooper()).runToEndOfTasks();
         assertTrue(amplitude.isInForeground());
-        assertEquals(amplitude.getPreviousSessionId(), timestamp);
-        assertEquals(amplitude.getLastEventId(), 1);
-        assertEquals(amplitude.getLastEventTime(), timestamp);
+        assertEquals(amplitude.previousSessionId, timestamp);
+        assertEquals(amplitude.lastEventId, 1);
+        assertEquals(amplitude.lastEventTime, timestamp);
 
         // verify that start session event sent
         assertEquals(getUnsentEventCount(), 1);
@@ -482,21 +482,21 @@ public class SessionTest extends BaseTest {
         long [] timestamps = {timestamp, timestamp + minTimeBetweenSessionsMillis};
         AmplitudeCallbacks callBacks = new AmplitudeCallbacksWithTime(amplitude, timestamps);
 
-        assertEquals(amplitude.getPreviousSessionId(), -1);
-        assertEquals(amplitude.getLastEventId(), -1);
-        assertEquals(amplitude.getLastEventTime(), -1);
+        assertEquals(amplitude.previousSessionId, -1);
+        assertEquals(amplitude.lastEventId, -1);
+        assertEquals(amplitude.lastEventTime, -1);
 
         callBacks.onActivityResumed(null);
         Shadows.shadowOf(amplitude.logThread.getLooper()).runToEndOfTasks();
-        assertEquals(amplitude.getPreviousSessionId(), timestamps[0]);
-        assertEquals(amplitude.getLastEventId(), -1);
-        assertEquals(amplitude.getLastEventTime(), timestamps[0]);
+        assertEquals(amplitude.previousSessionId, timestamps[0]);
+        assertEquals(amplitude.lastEventId, -1);
+        assertEquals(amplitude.lastEventTime, timestamps[0]);
 
         callBacks.onActivityPaused(null);
         Shadows.shadowOf(amplitude.logThread.getLooper()).runToEndOfTasks();
-        assertEquals(amplitude.getPreviousSessionId(), timestamps[0]);
-        assertEquals(amplitude.getLastEventId(), -1);
-        assertEquals(amplitude.getLastEventTime(), timestamps[1]);
+        assertEquals(amplitude.previousSessionId, timestamps[0]);
+        assertEquals(amplitude.lastEventId, -1);
+        assertEquals(amplitude.lastEventTime, timestamps[1]);
         assertFalse(amplitude.isInForeground());
     }
 
@@ -510,24 +510,24 @@ public class SessionTest extends BaseTest {
         long [] timestamps = {timestamp, timestamp + minTimeBetweenSessionsMillis};
         AmplitudeCallbacks callBacks = new AmplitudeCallbacksWithTime(amplitude, timestamps);
 
-        assertEquals(amplitude.getPreviousSessionId(), -1);
-        assertEquals(amplitude.getLastEventId(), -1);
-        assertEquals(amplitude.getLastEventTime(), -1);
+        assertEquals(amplitude.previousSessionId, -1);
+        assertEquals(amplitude.lastEventId, -1);
+        assertEquals(amplitude.lastEventTime, -1);
         assertEquals(getUnsentEventCount(), 0);
 
         callBacks.onActivityResumed(null);
         looper.runToEndOfTasks();
-        assertEquals(amplitude.getPreviousSessionId(), timestamps[0]);
-        assertEquals(amplitude.getLastEventId(), 1);
-        assertEquals(amplitude.getLastEventTime(), timestamps[0]);
+        assertEquals(amplitude.previousSessionId, timestamps[0]);
+        assertEquals(amplitude.lastEventId, 1);
+        assertEquals(amplitude.lastEventTime, timestamps[0]);
         assertEquals(getUnsentEventCount(), 1);
 
         // only refresh time, no session checking
         callBacks.onActivityPaused(null);
         looper.runToEndOfTasks();
-        assertEquals(amplitude.getPreviousSessionId(), timestamps[0]);
-        assertEquals(amplitude.getLastEventId(), 1);
-        assertEquals(amplitude.getLastEventTime(), timestamps[1]);
+        assertEquals(amplitude.previousSessionId, timestamps[0]);
+        assertEquals(amplitude.lastEventId, 1);
+        assertEquals(amplitude.lastEventTime, timestamps[1]);
         assertEquals(getUnsentEventCount(), 1);
     }
 
@@ -543,34 +543,34 @@ public class SessionTest extends BaseTest {
         };
         AmplitudeCallbacks callBacks = new AmplitudeCallbacksWithTime(amplitude, timestamps);
 
-        assertEquals(amplitude.getPreviousSessionId(), -1);
-        assertEquals(amplitude.getLastEventId(), -1);
-        assertEquals(amplitude.getLastEventTime(), -1);
+        assertEquals(amplitude.previousSessionId, -1);
+        assertEquals(amplitude.lastEventId, -1);
+        assertEquals(amplitude.lastEventTime, -1);
         assertEquals(getUnsentEventCount(), 0);
 
         callBacks.onActivityResumed(null);
         Shadows.shadowOf(amplitude.logThread.getLooper()).runToEndOfTasks();
-        assertEquals(amplitude.getPreviousSessionId(), timestamps[0]);
-        assertEquals(amplitude.getLastEventId(), -1);
-        assertEquals(amplitude.getLastEventTime(), timestamps[0]);
+        assertEquals(amplitude.previousSessionId, timestamps[0]);
+        assertEquals(amplitude.lastEventId, -1);
+        assertEquals(amplitude.lastEventTime, timestamps[0]);
         assertEquals(getUnsentEventCount(), 0);
         assertTrue(amplitude.isInForeground());
 
         // only refresh time, no session checking
         callBacks.onActivityPaused(null);
         Shadows.shadowOf(amplitude.logThread.getLooper()).runToEndOfTasks();
-        assertEquals(amplitude.getPreviousSessionId(), timestamps[0]);
-        assertEquals(amplitude.getLastEventId(), -1);
-        assertEquals(amplitude.getLastEventTime(), timestamps[1]);
+        assertEquals(amplitude.previousSessionId, timestamps[0]);
+        assertEquals(amplitude.lastEventId, -1);
+        assertEquals(amplitude.lastEventTime, timestamps[1]);
         assertEquals(getUnsentEventCount(), 0);
         assertFalse(amplitude.isInForeground());
 
         // resume after min session expired window, verify new session started
         callBacks.onActivityResumed(null);
         Shadows.shadowOf(amplitude.logThread.getLooper()).runToEndOfTasks();
-        assertEquals(amplitude.getPreviousSessionId(), timestamps[2]);
-        assertEquals(amplitude.getLastEventId(), -1);
-        assertEquals(amplitude.getLastEventTime(), timestamps[2]);
+        assertEquals(amplitude.previousSessionId, timestamps[2]);
+        assertEquals(amplitude.lastEventId, -1);
+        assertEquals(amplitude.lastEventTime, timestamps[2]);
         assertEquals(getUnsentEventCount(), 0);
         assertTrue(amplitude.isInForeground());
     }
@@ -589,34 +589,34 @@ public class SessionTest extends BaseTest {
         };
         AmplitudeCallbacks callBacks = new AmplitudeCallbacksWithTime(amplitude, timestamps);
 
-        assertEquals(amplitude.getPreviousSessionId(), -1);
-        assertEquals(amplitude.getLastEventId(), -1);
-        assertEquals(amplitude.getLastEventTime(), -1);
+        assertEquals(amplitude.previousSessionId, -1);
+        assertEquals(amplitude.lastEventId, -1);
+        assertEquals(amplitude.lastEventTime, -1);
         assertEquals(getUnsentEventCount(), 0);
 
         callBacks.onActivityResumed(null);
         looper.runToEndOfTasks();
-        assertEquals(amplitude.getPreviousSessionId(), timestamps[0]);
-        assertEquals(amplitude.getLastEventId(), 1);
-        assertEquals(amplitude.getLastEventTime(), timestamps[0]);
+        assertEquals(amplitude.previousSessionId, timestamps[0]);
+        assertEquals(amplitude.lastEventId, 1);
+        assertEquals(amplitude.lastEventTime, timestamps[0]);
         assertEquals(getUnsentEventCount(), 1);
         assertTrue(amplitude.isInForeground());
 
         // only refresh time, no session checking
         callBacks.onActivityPaused(null);
         looper.runToEndOfTasks();
-        assertEquals(amplitude.getPreviousSessionId(), timestamps[0]);
-        assertEquals(amplitude.getLastEventId(), 1);
-        assertEquals(amplitude.getLastEventTime(), timestamps[1]);
+        assertEquals(amplitude.previousSessionId, timestamps[0]);
+        assertEquals(amplitude.lastEventId, 1);
+        assertEquals(amplitude.lastEventTime, timestamps[1]);
         assertEquals(getUnsentEventCount(), 1);
         assertFalse(amplitude.isInForeground());
 
         // resume after min session expired window, verify new session started
         callBacks.onActivityResumed(null);
         looper.runToEndOfTasks();
-        assertEquals(amplitude.getPreviousSessionId(), timestamps[2]);
-        assertEquals(amplitude.getLastEventId(), 3);
-        assertEquals(amplitude.getLastEventTime(), timestamps[2]);
+        assertEquals(amplitude.previousSessionId, timestamps[2]);
+        assertEquals(amplitude.lastEventId, 3);
+        assertEquals(amplitude.lastEventTime, timestamps[2]);
         assertEquals(getUnsentEventCount(), 3);
         assertTrue(amplitude.isInForeground());
 
@@ -662,28 +662,28 @@ public class SessionTest extends BaseTest {
         };
         AmplitudeCallbacks callBacks = new AmplitudeCallbacksWithTime(amplitude, timestamps);
 
-        assertEquals(amplitude.getPreviousSessionId(), -1);
-        assertEquals(amplitude.getLastEventId(), -1);
-        assertEquals(amplitude.getLastEventTime(), -1);
+        assertEquals(amplitude.previousSessionId, -1);
+        assertEquals(amplitude.lastEventId, -1);
+        assertEquals(amplitude.lastEventTime, -1);
 
         callBacks.onActivityResumed(null);
         Shadows.shadowOf(amplitude.logThread.getLooper()).runToEndOfTasks();
-        assertEquals(amplitude.getPreviousSessionId(), timestamps[0]);
-        assertEquals(amplitude.getLastEventId(), -1);
-        assertEquals(amplitude.getLastEventTime(), timestamps[0]);
+        assertEquals(amplitude.previousSessionId, timestamps[0]);
+        assertEquals(amplitude.lastEventId, -1);
+        assertEquals(amplitude.lastEventTime, timestamps[0]);
 
         callBacks.onActivityPaused(null);
         Shadows.shadowOf(amplitude.logThread.getLooper()).runToEndOfTasks();
-        assertEquals(amplitude.getPreviousSessionId(), timestamps[0]);
-        assertEquals(amplitude.getLastEventId(), -1);
-        assertEquals(amplitude.getLastEventTime(), timestamps[1]);
+        assertEquals(amplitude.previousSessionId, timestamps[0]);
+        assertEquals(amplitude.lastEventId, -1);
+        assertEquals(amplitude.lastEventTime, timestamps[1]);
         assertFalse(amplitude.isInForeground());
 
         callBacks.onActivityResumed(null);
         Shadows.shadowOf(amplitude.logThread.getLooper()).runToEndOfTasks();
-        assertEquals(amplitude.getPreviousSessionId(), timestamps[0]);
-        assertEquals(amplitude.getLastEventId(), -1);
-        assertEquals(amplitude.getLastEventTime(), timestamps[2]);
+        assertEquals(amplitude.previousSessionId, timestamps[0]);
+        assertEquals(amplitude.lastEventId, -1);
+        assertEquals(amplitude.lastEventTime, timestamps[2]);
         assertTrue(amplitude.isInForeground());
     }
 
@@ -701,31 +701,31 @@ public class SessionTest extends BaseTest {
         };
         AmplitudeCallbacks callBacks = new AmplitudeCallbacksWithTime(amplitude, timestamps);
 
-        assertEquals(amplitude.getPreviousSessionId(), -1);
-        assertEquals(amplitude.getLastEventId(), -1);
-        assertEquals(amplitude.getLastEventTime(), -1);
+        assertEquals(amplitude.previousSessionId, -1);
+        assertEquals(amplitude.lastEventId, -1);
+        assertEquals(amplitude.lastEventTime, -1);
         assertEquals(getUnsentEventCount(), 0);
 
         callBacks.onActivityResumed(null);
         looper.runToEndOfTasks();
-        assertEquals(amplitude.getPreviousSessionId(), timestamps[0]);
-        assertEquals(amplitude.getLastEventId(), 1);
-        assertEquals(amplitude.getLastEventTime(), timestamps[0]);
+        assertEquals(amplitude.previousSessionId, timestamps[0]);
+        assertEquals(amplitude.lastEventId, 1);
+        assertEquals(amplitude.lastEventTime, timestamps[0]);
         assertEquals(getUnsentEventCount(), 1);
 
         callBacks.onActivityPaused(null);
         looper.runToEndOfTasks();
-        assertEquals(amplitude.getPreviousSessionId(), timestamps[0]);
-        assertEquals(amplitude.getLastEventId(), 1);
-        assertEquals(amplitude.getLastEventTime(), timestamps[1]);
+        assertEquals(amplitude.previousSessionId, timestamps[0]);
+        assertEquals(amplitude.lastEventId, 1);
+        assertEquals(amplitude.lastEventTime, timestamps[1]);
         assertFalse(amplitude.isInForeground());
         assertEquals(getUnsentEventCount(), 1);
 
         callBacks.onActivityResumed(null);
         looper.runToEndOfTasks();
-        assertEquals(amplitude.getPreviousSessionId(), timestamps[0]);
-        assertEquals(amplitude.getLastEventId(), 1);
-        assertEquals(amplitude.getLastEventTime(), timestamps[2]);
+        assertEquals(amplitude.previousSessionId, timestamps[0]);
+        assertEquals(amplitude.lastEventId, 1);
+        assertEquals(amplitude.lastEventTime, timestamps[2]);
         assertTrue(amplitude.isInForeground());
         assertEquals(getUnsentEventCount(), 1);
 
@@ -748,25 +748,25 @@ public class SessionTest extends BaseTest {
         long [] timestamps = {timestamp + minTimeBetweenSessionsMillis - 1};
         AmplitudeCallbacks callBacks = new AmplitudeCallbacksWithTime(amplitude, timestamps);
 
-        assertEquals(amplitude.getPreviousSessionId(), -1);
-        assertEquals(amplitude.getLastEventId(), -1);
-        assertEquals(amplitude.getLastEventTime(), -1);
+        assertEquals(amplitude.previousSessionId, -1);
+        assertEquals(amplitude.lastEventId, -1);
+        assertEquals(amplitude.lastEventTime, -1);
         assertEquals(getUnsentEventCount(), 0);
         assertFalse(amplitude.isInForeground());
 
         // logging an event before onResume will force a session check
         amplitude.logEventAsync("test", null, null, null, null, timestamp, false);
         looper.runToEndOfTasks();
-        assertEquals(amplitude.getPreviousSessionId(), timestamp);
-        assertEquals(amplitude.getLastEventId(), 1);
-        assertEquals(amplitude.getLastEventTime(), timestamp);
+        assertEquals(amplitude.previousSessionId, timestamp);
+        assertEquals(amplitude.lastEventId, 1);
+        assertEquals(amplitude.lastEventTime, timestamp);
         assertEquals(getUnsentEventCount(), 1);
 
         callBacks.onActivityResumed(null);
         Shadows.shadowOf(amplitude.logThread.getLooper()).runToEndOfTasks();
-        assertEquals(amplitude.getPreviousSessionId(), timestamp);
-        assertEquals(amplitude.getLastEventId(), 1);
-        assertEquals(amplitude.getLastEventTime(), timestamps[0]);
+        assertEquals(amplitude.previousSessionId, timestamp);
+        assertEquals(amplitude.lastEventId, 1);
+        assertEquals(amplitude.lastEventTime, timestamps[0]);
         assertEquals(getUnsentEventCount(), 1);
         assertTrue(amplitude.isInForeground());
 
@@ -786,26 +786,26 @@ public class SessionTest extends BaseTest {
         long [] timestamps = {timestamp + minTimeBetweenSessionsMillis};
         AmplitudeCallbacks callBacks = new AmplitudeCallbacksWithTime(amplitude, timestamps);
 
-        assertEquals(amplitude.getPreviousSessionId(), -1);
-        assertEquals(amplitude.getLastEventId(), -1);
-        assertEquals(amplitude.getLastEventTime(), -1);
+        assertEquals(amplitude.previousSessionId, -1);
+        assertEquals(amplitude.lastEventId, -1);
+        assertEquals(amplitude.lastEventTime, -1);
         assertEquals(getUnsentEventCount(), 0);
         assertFalse(amplitude.isInForeground());
 
         // logging an event before onResume will force a session check
         amplitude.logEventAsync("test", null, null, null, null, timestamp, false);
         looper.runToEndOfTasks();
-        assertEquals(amplitude.getPreviousSessionId(), timestamp);
-        assertEquals(amplitude.getLastEventId(), 2);
-        assertEquals(amplitude.getLastEventTime(), timestamp);
+        assertEquals(amplitude.previousSessionId, timestamp);
+        assertEquals(amplitude.lastEventId, 2);
+        assertEquals(amplitude.lastEventTime, timestamp);
         assertEquals(getUnsentEventCount(), 2);
 
         // onResume after session expires will start new session
         callBacks.onActivityResumed(null);
         Shadows.shadowOf(amplitude.logThread.getLooper()).runToEndOfTasks();
-        assertEquals(amplitude.getPreviousSessionId(), timestamps[0]);
-        assertEquals(amplitude.getLastEventId(), 4);
-        assertEquals(amplitude.getLastEventTime(), timestamps[0]);
+        assertEquals(amplitude.previousSessionId, timestamps[0]);
+        assertEquals(amplitude.lastEventId, 4);
+        assertEquals(amplitude.lastEventTime, timestamps[0]);
         assertEquals(getUnsentEventCount(), 4);
         assertTrue(amplitude.isInForeground());
 
@@ -926,7 +926,6 @@ public class SessionTest extends BaseTest {
         // log an event, should not be uploaded
         amplitude.logEventAsync("testEvent", null, null, null, null, timestamps[0], false);
         looper.runOneTask();
-        looper.runOneTask();
         assertEquals(getUnsentEventCount(), 1);
 
         // force client into background and verify no flushing of events
@@ -937,5 +936,60 @@ public class SessionTest extends BaseTest {
         // flushing disabled, so no request should be sent
         assertNull(request);
         assertEquals(getUnsentEventCount(), 1);
+    }
+
+    @Test
+    public void testIdentifyTriggerNewSession() throws JSONException {
+        amplitude.trackSessionEvents(true);
+
+        ShadowLooper looper = Shadows.shadowOf(amplitude.logThread.getLooper());
+        long sessionTimeoutMillis = 5 * 1000; //5s
+        amplitude.setSessionTimeoutMillis(sessionTimeoutMillis);
+
+        assertEquals(getUnsentEventCount(), 0);
+        assertEquals(getUnsentIdentifyCount(), 0);
+
+        // log 1st identify, initialize first session
+        Identify identify = new Identify().set("key", "value");
+        amplitude.identify(identify);
+        looper.runToEndOfTasks();
+        // trackSessions is true, start_session event is added
+        assertEquals(getUnsentEventCount(), 1);
+        assertEquals(getUnsentIdentifyCount(), 1);
+
+        JSONArray events = getUnsentEvents(1);
+        assertEquals(
+            events.getJSONObject(0).optString("event_type"), AmplitudeClient.START_SESSION_EVENT
+        );
+        JSONArray identifies = getUnsentIdentifys(1);
+        JSONObject expected = new JSONObject().put("$set", new JSONObject().put("key", "value"));
+        assertTrue(Utils.compareJSONObjects(
+            identifies.getJSONObject(0).getJSONObject("user_properties"), expected
+        ));
+    }
+
+    @Test
+    public void testOutOfSessionIdentifyDoesNotTriggerNewSession() throws JSONException {
+        amplitude.trackSessionEvents(true);
+
+        ShadowLooper looper = Shadows.shadowOf(amplitude.logThread.getLooper());
+        long sessionTimeoutMillis = 5 * 1000; //5s
+        amplitude.setSessionTimeoutMillis(sessionTimeoutMillis);
+
+        assertEquals(getUnsentEventCount(), 0);
+        assertEquals(getUnsentIdentifyCount(), 0);
+
+        // log 1st identify, initialize first session
+        Identify identify = new Identify().set("key", "value");
+        amplitude.identify(identify, true);
+        looper.runToEndOfTasks();
+        assertEquals(getUnsentEventCount(), 0);  // out of session, start session is not added
+        assertEquals(getUnsentIdentifyCount(), 1);
+
+        JSONArray identifies = getUnsentIdentifys(1);
+        JSONObject expected = new JSONObject().put("$set", new JSONObject().put("key", "value"));
+        assertTrue(Utils.compareJSONObjects(
+            identifies.getJSONObject(0).getJSONObject("user_properties"), expected
+        ));
     }
 }
