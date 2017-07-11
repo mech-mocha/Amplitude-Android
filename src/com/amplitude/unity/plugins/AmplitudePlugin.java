@@ -99,6 +99,8 @@ public class AmplitudePlugin {
         return Amplitude.getInstance().getDeviceId();
     }
 
+    public static void regenerateDeviceId() { Amplitude.getInstance().regenerateDeviceId(); }
+
     public static void trackSessionEvents(boolean enabled) {
         Amplitude.getInstance().trackSessionEvents(enabled);
     }
@@ -330,10 +332,10 @@ public class AmplitudePlugin {
     }
 
     public static void setMinTimeBetweenSessionsMillis (long timeout) {
-        AmplitudeClient.getInstance ().setMinTimeBetweenSessionsMillis(timeout);
+        Amplitude.getInstance ().setMinTimeBetweenSessionsMillis(timeout);
     }
 
     public static void useAdvertisingIdForDeviceId () {
-        AmplitudeClient.getInstance ().useAdvertisingIdForDeviceId ();
+        Amplitude.getInstance ().useAdvertisingIdForDeviceId ();
     }
 }

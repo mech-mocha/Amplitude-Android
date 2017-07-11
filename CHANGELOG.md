@@ -1,5 +1,20 @@
 ## Unreleased
 
+## 2.14.0 (July 05, 2017)
+
+* Add support for logging events to multiple Amplitude apps. See our [Help Center Documentation](https://amplitude.zendesk.com/hc/en-us/articles/115002935588#logging-events-to-multiple-projects) for details.
+
+## 2.13.4 (May 09, 2017)
+
+* Handle exceptions when fetching device carrier information. Thanks to @fkam-tt for the pull request.
+* Copy userProperties on main thread in `setUserProperties` to prevent ConcurrentModificationExceptions.
+* Migrating setup instructions and SDK documentation in the README file to Zendesk articles.
+
+## 2.13.3 (March 13, 2017)
+
+* Handle exceptions when reading from database. Only affects certain Fairphone and LG devices.
+* Handle exceptions when building request to upload event data. Only affects certain Lenovo devices.
+
 ## 2.13.2 (December 22, 2016)
 
 * Fix crash when pulling null unsent event strings during upload.

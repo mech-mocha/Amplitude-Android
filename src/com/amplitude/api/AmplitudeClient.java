@@ -86,21 +86,6 @@ public class AmplitudeClient {
      */
     public static final String PREVIOUS_SESSION_ID_KEY = "previous_session_id";
 
-
-    /**
-     * The default shared instance. This is fetched by {@code Amplitude.getInstance()}
-     */
-    protected static AmplitudeClient instance = new AmplitudeClient();
-
-    /**
-     * Gets the default AmplitudeClient instance.
-     *
-     * @return the default instance
-     */
-    public static AmplitudeClient getInstance() {
-        return instance;
-    }
-
     private static final AmplitudeLog logger = AmplitudeLog.getLogger();
 
     /**
@@ -119,6 +104,10 @@ public class AmplitudeClient {
      * The Amplitude App API key.
      */
     protected String apiKey;
+    /**
+     * The name for this instance of AmplitudeClient.
+     */
+    protected String instanceName;
     /**
      * The user's ID value.
      */
@@ -185,9 +174,18 @@ public class AmplitudeClient {
     WorkerThread httpThread = new WorkerThread("httpThread");
 
     /**
-     * Instantiates a new AmplitudeClient and starts worker threads.
+     * Instantiates a new default instance AmplitudeClient and starts worker threads.
      */
     public AmplitudeClient() {
+        this(null);
+    }
+
+    /**
+     * Instantiates a new AmplitudeClient with instance name and starts worker threads.
+     * @param instance
+     */
+    public AmplitudeClient(String instance) {
+        this.instanceName = Utils.normalizeInstanceName(instance);
         logThread.start();
         httpThread.start();
     }
@@ -228,7 +226,7 @@ public class AmplitudeClient {
 
         this.context = context.getApplicationContext();
         this.apiKey = apiKey;
-        this.dbHelper = DatabaseHelper.getDatabaseHelper(this.context);
+        this.dbHelper = DatabaseHelper.getDatabaseHelper(this.context, this.instanceName);
 
         final AmplitudeClient client = this;
         runOnLogThread(new Runnable() {
@@ -237,8 +235,10 @@ public class AmplitudeClient {
                 if (!initialized) {
                     // this try block is idempotent, so it's safe to retry initialize if failed
                     try {
-                        AmplitudeClient.upgradePrefs(context);
-                        AmplitudeClient.upgradeSharedPrefsToDB(context);
+                        if (instanceName.equals(Constants.DEFAULT_INSTANCE)) {
+                            AmplitudeClient.upgradePrefs(context);
+                            AmplitudeClient.upgradeSharedPrefsToDB(context);
+                        }
                         httpClient = new OkHttpClient();
                         initializeDeviceInfo();
 
@@ -1296,41 +1296,23 @@ public class AmplitudeClient {
             return;
         }
 
-        runOnLogThread(new Runnable() {
-            @Override
-            public void run() {
-                if (TextUtils.isEmpty(apiKey)) {  // in case initialization failed
-                    return;
-                }
+        // sanitize and truncate properties before trying to convert to identify
+        JSONObject sanitized = truncate(userProperties);
+        if (sanitized.length() == 0) {
+            return;
+        }
 
-                // Create deep copy to try and prevent ConcurrentModificationException
-                JSONObject copy;
-                try {
-                    copy = new JSONObject(userProperties.toString());
-                } catch (JSONException e) {
-                    logger.e(TAG, e.toString());
-                    return; // could not create copy
-                }
-
-                // sanitize and truncate properties before trying to convert to identify
-                JSONObject sanitized = truncate(copy);
-                if (sanitized.length() == 0) {
-                    return;
-                }
-
-                Identify identify = new Identify();
-                Iterator<?> keys = sanitized.keys();
-                while (keys.hasNext()) {
-                    String key = (String) keys.next();
-                    try {
-                        identify.setUserProperty(key, sanitized.get(key));
-                    } catch (JSONException e) {
-                        logger.e(TAG, e.toString());
-                    }
-                }
-                identify(identify);
+        Identify identify = new Identify();
+        Iterator<?> keys = sanitized.keys();
+        while (keys.hasNext()) {
+            String key = (String) keys.next();
+            try {
+                identify.setUserProperty(key, sanitized.get(key));
+            } catch (JSONException e) {
+                logger.e(TAG, e.toString());
             }
-        });
+        }
+        identify(identify);
     }
 
     /**
@@ -1773,10 +1755,17 @@ public class AmplitudeClient {
             .add("checksum", checksumString)
             .build();
 
-        Request request = new Request.Builder()
-            .url(url)
-            .post(body)
-            .build();
+        Request request;
+        try {
+             request = new Request.Builder()
+                .url(url)
+                .post(body)
+                .build();
+        } catch (IllegalArgumentException e) {
+            logger.e(TAG, e.toString());
+            uploadingCurrently.set(false);
+            return;
+        }
 
         boolean uploadSuccess = false;
 
